@@ -38,6 +38,7 @@ public class CardSlotsUIViewCreator
 
     private void OnGet(CardSlotUIView view)
     {
+        view.transform.SetAsLastSibling();
         view.gameObject.SetActive(true);
     }
 
