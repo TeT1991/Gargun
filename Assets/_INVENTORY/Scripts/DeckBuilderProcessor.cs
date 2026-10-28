@@ -29,7 +29,8 @@ public class DeckBuilderProcessor : MonoBehaviour
 
         CreateCards();
 
-        _pageSwitcher = new PageSwitcher(CalculatePagesCount(), _nextPageButton, _previousPageButton, _pageButtonsRoot, _pageButtonPrefab);
+        int currentPage = 0;
+        _pageSwitcher = new PageSwitcher(currentPage,CalculatePagesCount(), _nextPageButton, _previousPageButton, _pageButtonsRoot, _pageButtonPrefab);
         _pageSwitcher.CurrentPageChanged += SetPage;
         SetPage(0);
 

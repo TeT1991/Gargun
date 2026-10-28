@@ -1,4 +1,3 @@
-using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,27 +6,27 @@ using UnityEngine.UI;
 
 public class PageSwitcher : IDisposable
 {
-    private int _currentPageIndex;
-    private int _pagesCount;
+    private readonly int _pagesCount;
+    private readonly Button _nextPageButton;
+    private readonly Button _previousButton;
+    private readonly RectTransform _pageButtonsRoot;
 
-    private Button _nextPageButton;
-    private Button _previousButton;
-    private RectTransform _pageButtonsRoot;
-
-    private List<PageButtonUIVIew> _pageButtons;
-    private PageButtonUIVIew _pageButtonPrefab;
+    private readonly List<PageButtonUIVIew> _pageButtons;
+    private readonly PageButtonUIVIew _pageButtonPrefab;
 
     private readonly List<(PageButtonUIVIew view, UnityAction action)> _listeners = new();
-    private UnityAction _nextPageDelegate;
-    private UnityAction _previousDelegate;
+    private readonly UnityAction _nextPageDelegate;
+    private readonly UnityAction _previousDelegate;
+
+    private int _currentPageIndex;
 
     public event Action<int> CurrentPageChanged;
 
-    public PageSwitcher(int pagesCount, Button nextPageButton, Button previousButton, RectTransform pageButtonsRoot, PageButtonUIVIew pageButtonPrefab)
+    public PageSwitcher(int currentPageIndex,int pagesCount, Button nextPageButton, Button previousButton, RectTransform pageButtonsRoot, PageButtonUIVIew pageButtonPrefab)
     {
         _pageButtons = new List<PageButtonUIVIew>();
 
-        _currentPageIndex = 0;
+        _currentPageIndex = currentPageIndex;
         _pagesCount = pagesCount;
 
 
@@ -60,7 +59,6 @@ public class PageSwitcher : IDisposable
                 HideSwitchButtons();
                 CurrentPageChanged?.Invoke(_currentPageIndex);
             }
-
         }
     }
 
