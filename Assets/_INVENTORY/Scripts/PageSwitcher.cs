@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public class PageSwitcher : IDisposable
 {
-    private readonly int _pagesCount;
+    private int _pagesCount;
     private readonly Button _nextPageButton;
     private readonly Button _previousButton;
     private readonly RectTransform _pageButtonsRoot;
@@ -26,8 +26,8 @@ public class PageSwitcher : IDisposable
     {
         _pageButtons = new List<PageButtonUIVIew>();
 
-        _currentPageIndex = currentPageIndex;
-        _pagesCount = pagesCount;
+        _pagesCount = Mathf.Max(0, pagesCount);
+        _currentPageIndex = Mathf.Clamp(currentPageIndex, 0, Mathf.Max(0, _pagesCount - 1));
 
 
         _nextPageButton = nextPageButton;
@@ -62,9 +62,43 @@ public class PageSwitcher : IDisposable
         }
     }
 
+    public void SetPagesCount(int pagesCount)
+    {
+        int newPagesCount = Mathf.Max(0, pagesCount);
+
+        if (_pagesCount == newPagesCount)
+        {
+            return;
+        }
+
+        int previousPageIndex = _currentPageIndex;
+        _pagesCount = newPagesCount;
+        _currentPageIndex = Mathf.Clamp(_currentPageIndex, 0, Mathf.Max(0, _pagesCount - 1));
+
+        for (int i = _pageButtons.Count - 1; i >= _pagesCount; i--)
+        {
+            PageButtonUIVIew pageButton = _pageButtons[i];
+            pageButton.Button.onClick.RemoveListener(_listeners[i].action);
+            pageButton.gameObject.SetActive(false);
+            MonoBehaviour.Destroy(pageButton.gameObject);
+
+            _pageButtons.RemoveAt(i);
+            _listeners.RemoveAt(i);
+        }
+
+        CreatePages();
+        MarkSelectedPage();
+        HideSwitchButtons();
+
+        if (_currentPageIndex != previousPageIndex)
+        {
+            CurrentPageChanged?.Invoke(_currentPageIndex);
+        }
+    }
+
     private void CreatePages()
     {
-        for (int i = 0; i < _pagesCount; i++)
+        for (int i = _pageButtons.Count; i < _pagesCount; i++)
         {
             PageButtonUIVIew pageButton = MonoBehaviour.Instantiate(_pageButtonPrefab, _pageButtonsRoot);
             int pageIndex = i;
@@ -86,13 +120,16 @@ public class PageSwitcher : IDisposable
             button.MarkAsUnselected();
         }
 
-        _pageButtons[_currentPageIndex].MarkAsSelected();
+        if (_pagesCount > 0)
+        {
+            _pageButtons[_currentPageIndex].MarkAsSelected();
+        }
     }
 
     private void HideSwitchButtons()
     {
-        _nextPageButton.gameObject.SetActive(_currentPageIndex != _pagesCount - 1);
-        _previousButton.gameObject.SetActive(_currentPageIndex != 0);
+        _nextPageButton.gameObject.SetActive(_currentPageIndex < _pagesCount - 1);
+        _previousButton.gameObject.SetActive(_currentPageIndex > 0);
     }
 
     private void OnPageSwitchPressed(int direction)

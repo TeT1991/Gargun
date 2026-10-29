@@ -601,6 +601,7 @@ MonoBehaviour:
   _idText: {fileID: 5729679274270125400}
   _nameText: {fileID: 3071684209029818323}
   _descriptionText: {fileID: 2549103251431636431}
+  _button: {fileID: 2247542654350309472}
 --- !u!1 &8068764876477704561
 GameObject:
   m_ObjectHideFlags: 0
