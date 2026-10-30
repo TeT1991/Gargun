@@ -5,42 +5,50 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-public class DecksProcessor
+public class DecksProcessor : IDisposable
 {
     private List<Deck> _decks;
     private Dictionary<DeckSlot, Card> _slots;
     private int _currentDeckIndex;
 
     private Button _createDeckButton;
-    private Button _removeDeckButton;
     private DeckSlot _deckSlotPrefab;
     private RectTransform _slotsRoot;
 
     public event Action DeckAdded;
     public event Action DeckRemoved;
+    public event Action CurrentDeckChanged;
     public event Action<Card> CardSelected;
 
-    public DecksProcessor(Button createDeckButton, Button removeDeckButton, DeckSlot deckSlotPrefab, RectTransform root)
+    public DecksProcessor(Button createDeckButton, DeckSlot deckSlotPrefab, RectTransform root)
     {
         _createDeckButton = createDeckButton;
-        _removeDeckButton = removeDeckButton;
         _deckSlotPrefab = deckSlotPrefab;
         _slotsRoot = root;
 
         _decks = new List<Deck>();
         _slots = new Dictionary<DeckSlot, Card>();
-        _currentDeckIndex = 0;
+        _currentDeckIndex = -1;
 
         _createDeckButton.onClick.AddListener(AddDeck);
-        _removeDeckButton.onClick.AddListener(RemoveDeck);
 
         AddDeck();
-        SetPage();
     }
+
+    public int DecksCount => _decks.Count;
+    public int CurrentDeckIndex => _currentDeckIndex;
+    public Deck CurrentDeck => _currentDeckIndex >= 0 ? _decks[_currentDeckIndex] : null;
 
     public void SwitchDeck(int index)
     {
+        if (index < 0 || index >= _decks.Count || index == _currentDeckIndex)
+        {
+            return;
+        }
+
         _currentDeckIndex = index;
+        SetPage();
+        CurrentDeckChanged?.Invoke();
     }
 
     public void ClearDeck()
@@ -48,6 +56,8 @@ public class DecksProcessor
         foreach (KeyValuePair<DeckSlot, Card> pair in _slots)
         {
             DeckSlot slot = pair.Key;
+            slot.Button.onClick.RemoveAllListeners();
+            slot.gameObject.SetActive(false);
             MonoBehaviour.Destroy(slot.gameObject);
         }
 
@@ -57,54 +67,89 @@ public class DecksProcessor
     public void AddDeck()
     {
         _decks.Add(new Deck());
+        _currentDeckIndex = _decks.Count - 1;
+        SetPage();
+        CurrentDeckChanged?.Invoke();
         DeckAdded?.Invoke();
     }
 
     public void RemoveDeck()
     {
+        if (_currentDeckIndex < 0)
+        {
+            return;
+        }
+
         _decks.RemoveAt(_currentDeckIndex);
+        _currentDeckIndex = _decks.Count == 0 ? -1 : Mathf.Min(_currentDeckIndex, _decks.Count - 1);
+        SetPage();
+        CurrentDeckChanged?.Invoke();
         DeckRemoved?.Invoke();
     }
 
     public void AddCard(Card card)
     {
-        DeckSlot slot = CreateSlot();
-        slot.SetLabelText(card.Name);
-        UnityAction clickHandler = () => OnSlotClicked(slot);
-        slot.Button.onClick.AddListener(clickHandler);
-        _slots.Add(slot, card);
+        Deck currentDeck = CurrentDeck;
+
+        if (currentDeck == null)
+        {
+            return;
+        }
+
+        currentDeck.AddCard(card);
+        CreateCardSlot(card);
     }
 
     public void RemoveCard(Card card)
     {
         DeckSlot slot = _slots.FirstOrDefault(pair => pair.Value == card).Key;
 
-        if (slot != null)
+        if (slot == null)
         {
-            _slots.Remove(slot);
+            return;
         }
 
+        CurrentDeck.RemoveCard(card);
+        _slots.Remove(slot);
+        slot.Button.onClick.RemoveAllListeners();
+        slot.gameObject.SetActive(false);
         MonoBehaviour.Destroy(slot.gameObject);
     }
 
     public void SetPage()
     {
-        Deck currentDeck = _decks[_currentDeckIndex];
+        ClearDeck();
+        Deck currentDeck = CurrentDeck;
+
+        if (currentDeck == null)
+        {
+            return;
+        }
 
         for (int i = 0; i < currentDeck.CardsCount; i++)
         {
-            AddCard(currentDeck.GetCard(i));
+            CreateCardSlot(currentDeck.GetCard(i));
         }
     }
 
-    public DeckSlot CreateSlot()
+    private void CreateCardSlot(Card card)
     {
-        return MonoBehaviour.Instantiate(_deckSlotPrefab, _slotsRoot);
+        DeckSlot slot = MonoBehaviour.Instantiate(_deckSlotPrefab, _slotsRoot);
+        slot.SetLabelText(card.Name);
+        UnityAction clickHandler = () => OnSlotClicked(slot);
+        slot.Button.onClick.AddListener(clickHandler);
+        _slots.Add(slot, card);
     }
 
-    public void OnSlotClicked(DeckSlot slot)
+    private void OnSlotClicked(DeckSlot slot)
     {
         Card card = _slots[slot];
         CardSelected?.Invoke(card);
+    }
+
+    public void Dispose()
+    {
+        _createDeckButton.onClick.RemoveListener(AddDeck);
+        ClearDeck();
     }
 }

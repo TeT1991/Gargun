@@ -31,14 +31,7 @@ public class InventoryProcessor : IDisposable
         int previousPagesCount = CalculatePagesCount();
 
         _aviableCardsInInventory.Add(card);
-        SetInventoryPage(_currentPageIndex);
-
-        int pagesCount = CalculatePagesCount();
-
-        if (pagesCount != previousPagesCount)
-        {
-            PagesCountChanged?.Invoke(pagesCount);
-        }
+        RefreshCurrentPage(previousPagesCount);
     }
 
     public void RemoveCard(Card card)
@@ -46,14 +39,33 @@ public class InventoryProcessor : IDisposable
         int previousPagesCount = CalculatePagesCount();
 
         _aviableCardsInInventory.Remove(card);
-        SetInventoryPage(_currentPageIndex);
+        RefreshCurrentPage(previousPagesCount);
+    }
 
-        int pagesCount = CalculatePagesCount();
+    public void UpdateAvailableCards(Deck currentDeck)
+    {
+        int previousPagesCount = CalculatePagesCount();
+        HashSet<Card> cardsInDeck = new HashSet<Card>();
 
-        if (pagesCount != previousPagesCount)
+        if (currentDeck != null)
         {
-            PagesCountChanged?.Invoke(pagesCount);
+            for (int i = 0; i < currentDeck.CardsCount; i++)
+            {
+                cardsInDeck.Add(currentDeck.GetCard(i));
+            }
         }
+
+        _aviableCardsInInventory.Clear();
+
+        foreach (Card card in _cardsInInventory)
+        {
+            if (cardsInDeck.Contains(card) != true)
+            {
+                _aviableCardsInInventory.Add(card);
+            }
+        }
+
+        RefreshCurrentPage(previousPagesCount);
     }
 
     private void CreateCards()
@@ -74,9 +86,10 @@ public class InventoryProcessor : IDisposable
 
     public void SetInventoryPage(int index)
     {
-        _currentPageIndex = index;
+        int pagesCount = CalculatePagesCount();
+        _currentPageIndex = Mathf.Clamp(index, 0, Mathf.Max(0, pagesCount - 1));
 
-        int firstCardIndex = CalculateFirstCardIndex(index);
+        int firstCardIndex = CalculateFirstCardIndex(_currentPageIndex);
         int cardsOnPage = Mathf.Clamp(_aviableCardsInInventory.Count - firstCardIndex, 0, _maxSlotsCountOnPage);
 
         ClearSlots();
@@ -89,6 +102,18 @@ public class InventoryProcessor : IDisposable
             Card card = _aviableCardsInInventory[i];
             slot.SetInfo(card.Id.ToString(), card.Name, card.Description);
             _slots.Add(slot, card);
+        }
+    }
+
+    private void RefreshCurrentPage(int previousPagesCount)
+    {
+        SetInventoryPage(_currentPageIndex);
+
+        int pagesCount = CalculatePagesCount();
+
+        if (pagesCount != previousPagesCount)
+        {
+            PagesCountChanged?.Invoke(pagesCount);
         }
     }
 
