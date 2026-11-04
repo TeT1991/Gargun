@@ -1,11 +1,8 @@
 using System;
 
-public partial class DeckStorage
+[Serializable]
+internal class SavedDeck
 {
-    [Serializable]
-    private class SavedDeck
-    {
-        public string Name;
-        public int[] CardIds;
-    }
+    public string Name;
+    public int[] CardIds;
 }

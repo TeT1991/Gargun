@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public partial class DeckStorage
+public class DeckStorage
 {
     private const string DeckKeyPrefix = "deck_";
     private const string DeckIndexKey = "decks_index";
