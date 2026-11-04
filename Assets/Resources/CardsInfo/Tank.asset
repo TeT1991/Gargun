@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f393d3614f0ae24a8f1767ccba99d85, type: 3}
   m_Name: Tank
   m_EditorClassIdentifier: 
-  _id: 2
+  _id: 3
   _name: Tank
   _description: Standart tank
   _sprite: {fileID: 0}

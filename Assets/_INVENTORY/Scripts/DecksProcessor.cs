@@ -7,6 +7,7 @@ using UnityEngine.UI;
 
 public class DecksProcessor : IDisposable
 {
+    private readonly DeckStorage _deckStorage;
     private List<Deck> _decks;
     private Dictionary<DeckSlot, Card> _slots;
     private int _currentDeckIndex;
@@ -18,10 +19,12 @@ public class DecksProcessor : IDisposable
     public event Action DeckAdded;
     public event Action DeckRemoved;
     public event Action CurrentDeckChanged;
+    public event Action CurrentDeckCardsChanged;
     public event Action<Card> CardSelected;
 
-    public DecksProcessor(Button createDeckButton, DeckSlot deckSlotPrefab, RectTransform root)
+    public DecksProcessor(Button createDeckButton, DeckSlot deckSlotPrefab, RectTransform root, DeckStorage deckStorage)
     {
+        _deckStorage = deckStorage;
         _createDeckButton = createDeckButton;
         _deckSlotPrefab = deckSlotPrefab;
         _slotsRoot = root;
@@ -32,7 +35,14 @@ public class DecksProcessor : IDisposable
 
         _createDeckButton.onClick.AddListener(AddDeck);
 
-        AddDeck();
+        if (_deckStorage.LoadDecks(RegisterDeck))
+        {
+            SwitchDeck(0);
+        }
+        else
+        {
+            AddDeck();
+        }
     }
 
     public int DecksCount => _decks.Count;
@@ -66,7 +76,19 @@ public class DecksProcessor : IDisposable
 
     public void AddDeck()
     {
-        _decks.Add(new Deck());
+        Deck deck = new Deck();
+        string defaultName = deck.Name;
+        string name = defaultName;
+
+        for (int suffix = 2; _deckStorage.ContainsDeck(name); suffix++)
+        {
+            name = $"{defaultName} {suffix}";
+        }
+
+        deck.Rename(name);
+        _deckStorage.Save(deck);
+        RegisterDeck(deck);
+
         _currentDeckIndex = _decks.Count - 1;
         SetPage();
         CurrentDeckChanged?.Invoke();
@@ -75,16 +97,43 @@ public class DecksProcessor : IDisposable
 
     public void RemoveDeck()
     {
-        if (_currentDeckIndex < 0)
+        Deck deck = CurrentDeck;
+
+        if (deck == null)
         {
             return;
         }
 
+        _deckStorage.Delete(deck.Name);
+        deck.Changed -= _deckStorage.Save;
         _decks.RemoveAt(_currentDeckIndex);
         _currentDeckIndex = _decks.Count == 0 ? -1 : Mathf.Min(_currentDeckIndex, _decks.Count - 1);
         SetPage();
         CurrentDeckChanged?.Invoke();
         DeckRemoved?.Invoke();
+    }
+
+    public bool TryRenameCurrentDeck(string name)
+    {
+        Deck deck = CurrentDeck;
+
+        if (deck == null || string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        if (deck.Name == name)
+        {
+            return true;
+        }
+
+        if (_deckStorage.ContainsDeck(name))
+        {
+            return false;
+        }
+
+        deck.Rename(name);
+        return true;
     }
 
     public void AddCard(Card card)
@@ -98,6 +147,7 @@ public class DecksProcessor : IDisposable
 
         currentDeck.AddCard(card);
         CreateCardSlot(card);
+        CurrentDeckCardsChanged?.Invoke();
     }
 
     public void RemoveCard(Card card)
@@ -114,6 +164,7 @@ public class DecksProcessor : IDisposable
         slot.Button.onClick.RemoveAllListeners();
         slot.gameObject.SetActive(false);
         MonoBehaviour.Destroy(slot.gameObject);
+        CurrentDeckCardsChanged?.Invoke();
     }
 
     public void SetPage()
@@ -130,6 +181,12 @@ public class DecksProcessor : IDisposable
         {
             CreateCardSlot(currentDeck.GetCard(i));
         }
+    }
+
+    private void RegisterDeck(Deck deck)
+    {
+        _decks.Add(deck);
+        deck.Changed += _deckStorage.Save;
     }
 
     private void CreateCardSlot(Card card)
@@ -150,6 +207,12 @@ public class DecksProcessor : IDisposable
     public void Dispose()
     {
         _createDeckButton.onClick.RemoveListener(AddDeck);
+
+        foreach (Deck deck in _decks)
+        {
+            deck.Changed -= _deckStorage.Save;
+        }
+
         ClearDeck();
     }
 }

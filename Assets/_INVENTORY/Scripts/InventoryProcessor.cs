@@ -15,6 +15,7 @@ public class InventoryProcessor : IDisposable
     private int _currentPageIndex;
 
     public event Action<int> PagesCountChanged;
+    public event Action<int, int> CardsCountChanged;
     public event Action<Card> CardSelected;
 
     public InventoryProcessor(CardSlotUIView cardSlotPrefab, RectTransform cardSlotsRoot, int maxSlotsCountOnPage)
@@ -24,6 +25,33 @@ public class InventoryProcessor : IDisposable
         _cardSlotsUIViewCreator = new CardSlotsUIViewCreator(cardSlotPrefab, cardSlotsRoot);
 
         CreateCards();
+    }
+
+    public Card FindCardById(int id)
+    {
+        if (id < 0)
+        {
+            return null;
+        }
+
+        Card match = null;
+
+        foreach (Card card in _cardsInInventory)
+        {
+            if (card.Id != id)
+            {
+                continue;
+            }
+
+            if (match != null)
+            {
+                return null;
+            }
+
+            match = card;
+        }
+
+        return match;
     }
 
     public void AddCard(Card card)
@@ -115,6 +143,8 @@ public class InventoryProcessor : IDisposable
         {
             PagesCountChanged?.Invoke(pagesCount);
         }
+
+        CardsCountChanged?.Invoke(_aviableCardsInInventory.Count, _cardsInInventory.Length);
     }
 
     private void ClearSlots()
