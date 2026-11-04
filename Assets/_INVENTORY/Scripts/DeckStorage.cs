@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class DeckStorage
+public partial class DeckStorage
 {
     private const string DeckKeyPrefix = "deck_";
     private const string DeckIndexKey = "decks_index";
@@ -21,7 +20,7 @@ public class DeckStorage
             return false;
         }
 
-        DeckIndex index = new DeckIndex();
+        DeckIndex index = new();
         ReadIndex(index);
 
         foreach (string name in index.Names)
@@ -44,7 +43,7 @@ public class DeckStorage
 
     public void Save(Deck deck, string previousName = null)
     {
-        SavedDeck savedDeck = new SavedDeck
+        SavedDeck savedDeck = new()
         {
             Name = deck.Name,
             CardIds = new int[deck.CardsCount]
@@ -55,7 +54,7 @@ public class DeckStorage
             savedDeck.CardIds[i] = deck.GetCard(i).Id;
         }
 
-        DeckIndex index = new DeckIndex();
+        DeckIndex index = new();
         ReadIndex(index);
         int position = index.Names.IndexOf(previousName ?? deck.Name);
 
@@ -83,7 +82,7 @@ public class DeckStorage
 
     public void Delete(string name)
     {
-        DeckIndex index = new DeckIndex();
+        DeckIndex index = new();
         ReadIndex(index);
         index.Names.Remove(name);
 
@@ -135,18 +134,5 @@ public class DeckStorage
     private static string GetDeckKey(string name)
     {
         return DeckKeyPrefix + name;
-    }
-
-    [Serializable]
-    private class DeckIndex
-    {
-        public List<string> Names = new List<string>();
-    }
-
-    [Serializable]
-    private class SavedDeck
-    {
-        public string Name;
-        public int[] CardIds;
     }
 }
